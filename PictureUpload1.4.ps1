@@ -1,13 +1,14 @@
 ﻿##The information that is  provided "as is" without warranty of any kind. We disclaim all warranties, either express or implied, including the warranties of merchantability and fitness for a particular purpose. In no event shall Microsoft Corporation or its suppliers be liable for any damages whatsoever including direct, indirect, incidental, consequential, loss of business profits or special damages, even if Microsoft Corporation or its suppliers have been advised of the possibility of such damages. Some states do not allow the exclusion or limitation of liability for consequential or incidental damages. Therefore, the foregoing limitation may not apply.
 ##Using Dirsync outside of SharePoint to import Profile Pictures
 ##Author:adamsor; https://adamsorenson.com
-##Version: 1.3
+##Version: 1.4
 ##1.0 Using Profile changes script
 ##1.1 Improved performance.  Filtered to only include users with thumbnailphoto.  Only pulling thumbnailphoto and sAMAccountName.
 ##1.1 Summary added.  Logging improved.
 ##1.2 Fixed UploadPhoto progress bar.  Fixed location for photos with creating that folder if not already created.  Added the last line to create the thumbnails.
 ##1.3 Fixed performance issue when using larger pictures. Fixed issue with existing users failing since samaccountname is not included.  Fixed logging issue that added 'UR'.  No longer needing a DNLookup file.
 ##1.4 Added new variable to declare the Idenitifier claim.  This will work with SAML.
+##1.4.1 Fixed issue with DNlookup.xml being empty.  If empty, we will delete and start over.  Line 225
 
 Add-PSSnapin "Microsoft.SharePoint.PowerShell" -ErrorAction SilentlyContinue
 
@@ -218,8 +219,19 @@ Function DnLookup
             $xml.WriteStartElement("UR")
             $xml.WriteElementString("dn",[string]$DN)
 
-            $dsam=$aduser.Attributes[$IdentifierClaim]
-            $sam=Byte2DArrayToString -attr $dsam
+            If($aduser.Attributes[$IdentifierClaim] -eq $null)
+            {
+                $adsi = [adsisearcher]""
+                $adsi.SearchRoot.Path = $RootDSE.path
+                $adsi.filter = "(distinguishedName=$dn)"
+                $adsiuser = $adsi.FindOne()
+                $sam = $adsiuser.Properties.$($IdentifierClaim.tolower())
+            }
+            Else
+            {
+                $dsam=$aduser.Attributes[$($IdentifierClaim.ToLower())]
+                $sam=Byte2DArrayToString -attr $dsam
+            }
 
             $xml.WriteElementString($IdentifierClaim,[string]$sam)
 
