@@ -205,6 +205,11 @@ Function DnLookup
     #DNLookup check to see if the file is created.
     If($DNlookup -eq $null)
     {
+        If(Test-Path $fileloc)
+        {
+           "Removing dnlookup.xml because it's empty" | out-file $log -Append -noclobber
+           Remove-Item $fileloc 
+        }
         Try
         {
             "Trying to create DNlookup.xml" | out-file $log -Append -noclobber
